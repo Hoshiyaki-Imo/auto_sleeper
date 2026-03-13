@@ -1,16 +1,19 @@
-import pystray, time, threading, os, tomllib
+import pystray, time, threading, os, tomllib, sys
 from PIL import Image
 
 SLEEPTIME = 10 #default value
 
-image = Image.open("digital_detox_auto_sleeper.png")
+default_image = Image.open("default.png")
+not_started_image = Image.open("not_started.png")
+three_min_image = Image.open("3min.png")
 running = True
 timer = None
 first = None
 sleepReturn = None
+icon = None
 
 def sleepReturnCheck():
-    global first
+    global first, icon
     if first:
         setSleepTime()
         first = False
@@ -22,9 +25,18 @@ def sleepReturnCheck():
             print("returned")
         last = now
         time.sleep(1)
+        if timer and timer.is_alive():
+            remaining = int((sleep_at - time.time())/60)
+            icon.title = f"Auto Sleeper({remaining}min left)"
+            if remaining < 4:
+                icon.icon = three_min_image
+        else:
+            icon.title = f"Auto Sleeper(push start button)"
 
 def setSleepTime(icon = None, query = None):
     global timer, sleep_at
+    if str(query) == "Start timer" and timer.is_alive():
+        return
     sleep_at = time.time() + SLEEPTIME * 60
     new_time = (SLEEPTIME + 0.5) * 60
     makeTimer(new_time)
@@ -49,8 +61,10 @@ def makeTimer(sleep_time):
     global timer
     if timer:
         timer.cancel()
+        print()
     timer = threading.Timer(sleep_time, sleep)
     timer.start()
+    icon.icon = default_image
     print("make new timer")
 
 def exit(icon = None, query = None):
@@ -65,12 +79,19 @@ def cancelTimer(icon, query):
     if timer:
         timer.cancel()
         print(timer)
-    print(timer)
+    icon.icon = not_started_image
+
+def openSettingFile(icon, query):
+    if not os.path.exists("setting.toml"):
+        with open("setting.toml", "w") as f:
+            f.write("sleeping_time = 10\nextend_time = [5,10]")
+    os.startfile("setting.toml")
+
+def restart():
+    os.execv(sys.executable, ['python'] + sys.argv)
 
 def main():
-    global sleepReturn, SLEEPTIME
-    sleepReturn = threading.Thread(target=sleepReturnCheck, daemon=True)
-    sleepReturn.start()
+    global sleepReturn, SLEEPTIME, icon
     extendTime = []
     try:
         with open("setting.toml", mode="rb") as f:
@@ -82,13 +103,18 @@ def main():
         extendTime = [5]
         print("not found setting file")
     print("sleeping time set " + str(SLEEPTIME))
-    extendTimeMenuItems = [pystray.MenuItem(f"+{i}min", lambda icon, t = i: extendSleepTimer(icon, t)) for i in extendTime]
-    icon = pystray.Icon("auto_sleeper", image, "auto_sleeper", 
-                        menu=pystray.Menu(pystray.MenuItem("Cancel timer", cancelTimer, enabled= lambda _: timer and timer.is_alive()),
-                                          pystray.MenuItem("Start timer", setSleepTime, enabled= lambda _: not (timer and timer.is_alive())),
+    extendTimeMenuItems = [pystray.MenuItem(f"+{i}min", extendSleepTimer) for i in extendTime]
+    icon = pystray.Icon("auto_sleeper", default_image, "Auto Sleeper",
+                        menu=pystray.Menu(pystray.MenuItem("Wanna exit", pystray.Menu(pystray.MenuItem("Really?", pystray.Menu(pystray.MenuItem("No", None), pystray.MenuItem("Exit", exit))))),
+                                          pystray.MenuItem("Open setting file", openSettingFile),
+                                          pystray.MenuItem("Restart", restart),
+                                          pystray.MenuItem("Cancel timer", cancelTimer, enabled= lambda _: timer and timer.is_alive()),
+                                          pystray.MenuItem("Start timer", setSleepTime, default=True, enabled= lambda _: not (timer and timer.is_alive())),
                                           pystray.MenuItem("Extend time", pystray.Menu(*extendTimeMenuItems)), 
-                                          pystray.MenuItem("Wanna exit", pystray.Menu(pystray.MenuItem("Really?", pystray.Menu(pystray.MenuItem("No", None), pystray.MenuItem("Exit", exit))))))
                                           )
+    )
+    sleepReturn = threading.Thread(target=sleepReturnCheck, daemon=True)
+    sleepReturn.start()
     icon.run()
 
 if __name__ == "__main__":
