@@ -51,7 +51,7 @@ def setSleepTime(icon = None, query = None):
     else:
         print("too short")
 
-def sleep():
+def sleep(icon = None, query = None):
     subprocess.run("rundll32.exe powrprof.dll,SetSuspendState 0,1,0", shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
 
 def extendSleepTimer(icon, extend_minutes_item):
@@ -118,7 +118,7 @@ def makeIcon():
         timerTime = [5]
         print("not found setting file")
     
-    new_menu = pystray.Menu(pystray.MenuItem("Wanna exit", pystray.Menu(pystray.MenuItem("Really?", pystray.Menu(pystray.MenuItem("No", None), pystray.MenuItem("Exit", exit))))),
+    new_menu = pystray.Menu(pystray.MenuItem("Wanna exit", pystray.Menu(pystray.MenuItem("Really?", pystray.Menu(pystray.MenuItem("No", None), pystray.MenuItem("Exit", exit), pystray.MenuItem("Sleep right now", sleep))))),
                                           pystray.MenuItem("Open setting file", openSettingFile),
                                           pystray.MenuItem("Scan", scan),
                                           pystray.MenuItem("Cancel timer", cancelTimer, enabled= lambda _: timer and timer.is_alive()),
