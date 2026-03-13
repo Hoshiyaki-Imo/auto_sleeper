@@ -33,11 +33,7 @@ def sleep():
     os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0")
 
 def extendSleepTimer(icon, extend_minutes_item):
-    extend_minutes = 0
-    if str(extend_minutes_item) == "5min":
-        extend_minutes = 5
-    elif str(extend_minutes_item) == "10min":
-        extend_minutes = 10
+    extend_minutes = int(extend_minutes_item.text[1:-3])
     global timer, sleep_at
     if not sleep_at:
         return
@@ -65,7 +61,7 @@ def exit(icon = None, query = None):
         timer.cancel()
     icon.stop()
 
-def ignoreTimer(icon, query):
+def cancelTimer(icon, query):
     if timer:
         timer.cancel()
         print(timer)
@@ -75,18 +71,22 @@ def main():
     global sleepReturn, SLEEPTIME
     sleepReturn = threading.Thread(target=sleepReturnCheck, daemon=True)
     sleepReturn.start()
+    extendTime = []
     try:
         with open("setting.toml", mode="rb") as f:
            dic = tomllib.load(f)
-           SLEEPTIME = dic["sleeping_time"]
+        SLEEPTIME = dic["sleeping_time"]
+        extendTime = dic["extend_time"]
     except:
         SLEEPTIME = 10
+        extendTime = [5]
         print("not found setting file")
-    print("sleeping time seted " + str(SLEEPTIME))
+    print("sleeping time set " + str(SLEEPTIME))
+    extendTimeMenuItems = [pystray.MenuItem(f"+{i}min", lambda icon, t = i: extendSleepTimer(icon, t)) for i in extendTime]
     icon = pystray.Icon("auto_sleeper", image, "auto_sleeper", 
-                        menu=pystray.Menu(pystray.MenuItem("Ignore", ignoreTimer, enabled= lambda _: timer and timer.is_alive()),
+                        menu=pystray.Menu(pystray.MenuItem("Cancel timer", cancelTimer, enabled= lambda _: timer and timer.is_alive()),
                                           pystray.MenuItem("Start timer", setSleepTime, enabled= lambda _: not (timer and timer.is_alive())),
-                                          pystray.MenuItem("Extend time", pystray.Menu(pystray.MenuItem("5min", extendSleepTimer), pystray.MenuItem("10min", extendSleepTimer))), 
+                                          pystray.MenuItem("Extend time", pystray.Menu(*extendTimeMenuItems)), 
                                           pystray.MenuItem("Wanna exit", pystray.Menu(pystray.MenuItem("Really?", pystray.Menu(pystray.MenuItem("No", None), pystray.MenuItem("Exit", exit))))))
                                           )
     icon.run()
