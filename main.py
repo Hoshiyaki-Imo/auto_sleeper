@@ -37,8 +37,15 @@ def setSleepTime(icon = None, query = None):
     global timer, sleep_at
     if str(query) == "Start timer" and timer.is_alive():
         return
-    sleep_at = time.time() + SLEEPTIME * 60
-    new_time = (SLEEPTIME + 0.5) * 60
+    if str(query) == "Start timer" or query == None:
+        long = SLEEPTIME * 60
+        sleep_at = time.time() + long
+        new_time = (SLEEPTIME + 0.5) * 60
+    else:
+        selected_time = int(str(query)[:-3])
+        long = selected_time * 60
+        sleep_at = time.time() + long
+        new_time = (selected_time + 0.5) * 60
     makeTimer(new_time)
 
 def sleep():
@@ -84,7 +91,7 @@ def cancelTimer(icon, query):
 def openSettingFile(icon, query):
     if not os.path.exists("setting.toml"):
         with open("setting.toml", "w") as f:
-            f.write("sleeping_time = 10\nextend_time = [5,10]")
+            f.write("sleeping_time = 10\nextend_time = [5,10]\ntimer_time = [5]\n")
     os.startfile("setting.toml")
 
 def restart():
@@ -98,9 +105,11 @@ def main():
            dic = tomllib.load(f)
         SLEEPTIME = dic["sleeping_time"]
         extendTime = dic["extend_time"]
+        timerTime = dic["timer_time"]
     except:
         SLEEPTIME = 10
         extendTime = [5]
+        timerTime = []
         print("not found setting file")
     print("sleeping time set " + str(SLEEPTIME))
     extendTimeMenuItems = [pystray.MenuItem(f"+{i}min", extendSleepTimer) for i in extendTime]
@@ -110,6 +119,7 @@ def main():
                                           pystray.MenuItem("Restart", restart),
                                           pystray.MenuItem("Cancel timer", cancelTimer, enabled= lambda _: timer and timer.is_alive()),
                                           pystray.MenuItem("Start timer", setSleepTime, default=True, enabled= lambda _: not (timer and timer.is_alive())),
+                                          pystray.MenuItem("Start timer(select time)", pystray.Menu(*[pystray.MenuItem(f"{i}min", setSleepTime) for i in timerTime]), enabled = True if (len(timerTime) != 0 and not(timer and timer.is_alive())) else False),
                                           pystray.MenuItem("Extend time", pystray.Menu(*extendTimeMenuItems)), 
                                           )
     )
