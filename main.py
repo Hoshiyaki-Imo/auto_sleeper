@@ -1,12 +1,13 @@
-import pystray, time, threading, os
+import pystray, time, threading, os, tomllib
 from PIL import Image
 
-SLEEPTIME = 10
+SLEEPTIME = 10 #default value
 
 image = Image.open("digital_detox_auto_sleeper.png")
 running = True
 timer = None
 first = None
+sleepReturn = None
 
 def sleepReturnCheck():
     global first
@@ -22,13 +23,11 @@ def sleepReturnCheck():
         last = now
         time.sleep(1)
 
-def setSleepTime():
+def setSleepTime(icon = None, query = None):
     global timer, sleep_at
-    if timer:
-        timer.cancel()
     sleep_at = time.time() + SLEEPTIME * 60
-    timer = threading.Timer((SLEEPTIME + 0.5) * 60, sleep) #+0.5は一応の時間
-    timer.start()
+    new_time = (SLEEPTIME + 0.5) * 60
+    makeTimer(new_time)
 
 def sleep():
     os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0")
@@ -42,33 +41,57 @@ def extendSleepTimer(icon, extend_minutes_item):
     global timer, sleep_at
     if not sleep_at:
         return
-    
     last_timer_time = sleep_at - time.time()
     new_time = last_timer_time + extend_minutes * 60
     sleep_at = time.time() + new_time
 
-    if timer:
-        timer.cancel()
+    makeTimer(new_time)
 
-    timer = threading.Timer(new_time, sleep) #+0.5は一応の時間
-    timer.start()
     print("extended"+ str(extend_minutes) + "min")
 
-def after_click(icon, query):
-    if str(query) == "":
-        pass
-    elif str(query) == "Exit":
-        running = False
-        if timer:
-            timer.cancel()
-        icon.stop()
+def makeTimer(sleep_time):
+    global timer
+    if timer:
+        timer.cancel()
+    timer = threading.Timer(sleep_time, sleep)
+    timer.start()
+    print("make new timer")
+
+def exit(icon = None, query = None):
+    global running
+    running = False
+    sleepReturn.join()
+    if timer:
+        timer.cancel()
+    icon.stop()
+
+def ignoreTimer(icon, query):
+    if timer:
+        timer.cancel()
+        print(timer)
+    print(timer)
 
 def main():
-    sleepReturn = threading.Thread(target=sleepReturnCheck)
+    global sleepReturn, SLEEPTIME
+    sleepReturn = threading.Thread(target=sleepReturnCheck, daemon=True)
     sleepReturn.start()
-    icon = pystray.Icon("auto_sleeper", image, "auto_sleeper", menu=pystray.Menu(pystray.MenuItem("Extend time", pystray.Menu(pystray.MenuItem("5min", extendSleepTimer), pystray.MenuItem("10min", extendSleepTimer))), pystray.MenuItem("Exit", after_click)))
+    try:
+        with open("setting.toml", mode="rb") as f:
+           dic = tomllib.load(f)
+           SLEEPTIME = dic["sleeping_time"]
+    except:
+        SLEEPTIME = 10
+        print("not found setting file")
+    print("sleeping time seted " + str(SLEEPTIME))
+    icon = pystray.Icon("auto_sleeper", image, "auto_sleeper", 
+                        menu=pystray.Menu(pystray.MenuItem("Ignore", ignoreTimer, enabled= lambda _: timer and timer.is_alive()),
+                                          pystray.MenuItem("Start timer", setSleepTime, enabled= lambda _: not (timer and timer.is_alive())),
+                                          pystray.MenuItem("Extend time", pystray.Menu(pystray.MenuItem("5min", extendSleepTimer), pystray.MenuItem("10min", extendSleepTimer))), 
+                                          pystray.MenuItem("Wanna exit", pystray.Menu(pystray.MenuItem("Really?", pystray.Menu(pystray.MenuItem("No", None), pystray.MenuItem("Exit", exit))))))
+                                          )
     icon.run()
 
 if __name__ == "__main__":
     first = True
+    sleep_at = None
     main()
