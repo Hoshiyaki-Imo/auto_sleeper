@@ -35,9 +35,9 @@ def sleepReturnCheck():
 
 def setSleepTime(icon = None, query = None):
     global timer, sleep_at
-    if str(query) == "Start timer" and timer.is_alive():
+    if "min" in str(query) and timer.is_alive():
         return
-    if str(query) == "Start timer" or query == None:
+    if "min" in str(query) or query == None:
         long = SLEEPTIME * 60
         sleep_at = time.time() + long
         new_time = (SLEEPTIME + 0.5) * 60
@@ -52,7 +52,7 @@ def setSleepTime(icon = None, query = None):
         print("too short")
 
 def sleep():
-    os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0")
+    subprocess.run("rundll32.exe powrprof.dll,SetSuspendState 0,1,0", shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
 
 def extendSleepTimer(icon, extend_minutes_item):
     extend_minutes = int(extend_minutes_item.text[1:-3])
@@ -122,7 +122,7 @@ def makeIcon():
                                           pystray.MenuItem("Open setting file", openSettingFile),
                                           pystray.MenuItem("Scan", scan),
                                           pystray.MenuItem("Cancel timer", cancelTimer, enabled= lambda _: timer and timer.is_alive()),
-                                          pystray.MenuItem("Start timer", setSleepTime, default=True, enabled= lambda _: not (timer and timer.is_alive())),
+                                          pystray.MenuItem(f"Start timer({SLEEPTIME} min)", setSleepTime, default=True, enabled= lambda _: not (timer and timer.is_alive())),
                                           pystray.MenuItem("Start timer(select time)", pystray.Menu(*[pystray.MenuItem(f"{i}min", setSleepTime) for i in timerTime]), enabled = True if (len(timerTime) != 0 and not(timer and timer.is_alive())) else False),
                                           pystray.MenuItem("Extend time", pystray.Menu(*[pystray.MenuItem(f"+{i}min", extendSleepTimer) for i in extendTime])),
     )
