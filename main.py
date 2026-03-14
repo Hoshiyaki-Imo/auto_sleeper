@@ -1,5 +1,6 @@
-import pystray, time, threading, os, tomllib, sys, subprocess
+import pystray, time, threading, os, tomllib, subprocess
 from PIL import Image
+from plyer import notification
 
 SLEEPTIME = 10 #default value
 
@@ -14,7 +15,7 @@ icon = None
 settingFilePath = None
 
 def sleepReturnCheck():
-    global first, icon
+    global first, icon, three_min_notification, notified
     if first:
         setSleepTime()
         first = False
@@ -30,24 +31,34 @@ def sleepReturnCheck():
             icon.title = f"Auto Sleeper({remaining}min left)"
             if remaining < 4:
                 icon.icon = three_min_image
+                if three_min_notification and not(notified):
+                    notification.notify(title="3min",
+                                        message="Sleep after 3min",
+                                        app_name="Auto Sleeper",
+                                        app_icon="icon.ico",
+                                        timeout=5
+                    )
+                    notified = True
         else:
             icon.title = f"Auto Sleeper(push start button)"
 
 def setSleepTime(icon = None, query = None):
     global timer, sleep_at
-    if "min" in str(query) and timer.is_alive():
+    if "Start" in str(query) and timer.is_alive():
         return
-    if "min" in str(query) or query == None:
+    if "Start timer" in str(query) or query == None:
         long = SLEEPTIME * 60
         sleep_at = time.time() + long
         new_time = (SLEEPTIME + 0.5) * 60
     else:
+        print(str(query)[:-3])
         selected_time = int(str(query)[:-3])
         long = selected_time * 60
         sleep_at = time.time() + long
         new_time = (selected_time + 0.5) * 60
     if new_time > 90:
         makeTimer(new_time)
+
     else:
         print("too short")
 
@@ -66,13 +77,14 @@ def extendSleepTimer(icon, extend_minutes_item):
     makeTimer(new_time)
 
 def makeTimer(sleep_time):
-    global timer
+    global timer, notified
     if timer:
         timer.cancel()
     timer = threading.Timer(sleep_time, sleep)
     timer.start()
     icon.icon = default_image
     icon.menu = makeIcon()
+    notified = False
 
 def exit(icon = None, query = None):
     global running
@@ -91,7 +103,7 @@ def cancelTimer(icon, query):
 def openSettingFile(icon, query):
     if not os.path.exists(settingFilePath):
         with open(settingFilePath, "w") as f:
-            f.write("sleeping_time = 10\nextend_time = [5]\ntimer_time = [5]\n")
+            f.write("sleeping_time = 10\nextend_time = [5]\ntimer_time = [5]\nthree_min_notification = false\n")
     os.startfile(settingFilePath)
 
 def getSettingPath():
@@ -102,7 +114,7 @@ def getSettingPath():
     return os.path.join(app_dir, "setting.toml")
 
 def makeIcon():
-    global SLEEPTIME, settingFilePath
+    global SLEEPTIME, settingFilePath, three_min_notification
     extendTime = None
     timerTime = None
     settingFilePath = getSettingPath()
@@ -112,10 +124,12 @@ def makeIcon():
         SLEEPTIME = dic["sleeping_time"]
         extendTime = dic["extend_time"]
         timerTime = dic["timer_time"]
+        three_min_notification = dic["three_min_notification"]
     except:
         SLEEPTIME = 10
-        extendTime = [5]
-        timerTime = [5]
+        extendTime = []
+        timerTime = []
+        three_min_notification = False
         print("not found setting file")
     
     new_menu = pystray.Menu(pystray.MenuItem("Wanna exit", pystray.Menu(pystray.MenuItem("Really?", pystray.Menu(pystray.MenuItem("No", None), pystray.MenuItem("Exit", exit), pystray.MenuItem("Sleep right now", sleep))))),
@@ -123,8 +137,8 @@ def makeIcon():
                                           pystray.MenuItem("Scan", scan),
                                           pystray.MenuItem("Cancel timer", cancelTimer, enabled= lambda _: timer and timer.is_alive()),
                                           pystray.MenuItem(f"Start timer({SLEEPTIME} min)", setSleepTime, default=True, enabled= lambda _: not (timer and timer.is_alive())),
-                                          pystray.MenuItem("Start timer(select time)", pystray.Menu(*[pystray.MenuItem(f"{i}min", setSleepTime) for i in timerTime]), enabled = True if (len(timerTime) != 0 and not(timer and timer.is_alive())) else False),
-                                          pystray.MenuItem("Extend time", pystray.Menu(*[pystray.MenuItem(f"+{i}min", extendSleepTimer) for i in extendTime])),
+                                          pystray.MenuItem("Start timer(select time)", pystray.Menu(*[pystray.MenuItem(f"{i}min", setSleepTime) for i in timerTime]), enabled = True if (len(timerTime) != 0 and not(timer and timer.is_alive())) else False, visible=True if len(timerTime) != 0 else False),
+                                          pystray.MenuItem("Extend time", pystray.Menu(*[pystray.MenuItem(f"+{i}min", extendSleepTimer) for i in extendTime]), enabled=True if(len(extendTime) != 0 and timer and timer.is_alive()) else False, visible=True if len(extendTime) != 0 else False),
     )
     return new_menu
 
