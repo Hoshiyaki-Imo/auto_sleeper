@@ -4,9 +4,9 @@ from plyer import notification
 
 SLEEPTIME = 10 #default value
 
-default_image = Image.open("default.png")
-not_started_image = Image.open("not_started.png")
-three_min_image = Image.open("3min.png")
+default_image = Image.open("images\\default.png")
+not_started_image = Image.open("images\\not_started.png")
+three_min_image = Image.open("images\\3min.png")
 running = True
 timer = None
 first = None
@@ -14,7 +14,7 @@ sleepReturn = None
 icon = None
 settingFilePath = None
 
-def notify(titles : str,messages : str, icon = "icon.ico"):
+def notify(titles : str,messages : str, icon = "images\\icon.ico"):
     notification.notify(title=titles,
                         message=messages,
                         app_name="Auto Sleeper",
@@ -41,7 +41,7 @@ def sleepReturnCheck():
             if remaining < 4:
                 icon.icon = three_min_image
                 if three_min_notification and not(notified):
-                    notify("Sleep in 3 minutes", "if you extend time, please push \"Extend time\" button.", "3min.ico")
+                    notify("Sleep in 3 minutes", "if you extend time, please push \"Extend time\" button.", "images\\3min.ico")
                     notified = True
         else:
             icon.title = f"Auto Sleeper(push me!)"
@@ -68,7 +68,7 @@ def setSleepTime(icon = 0, query = None):
         makeTimer(new_time)
 
     else:
-        notify("Too short to set!", "You have to set from two minutes", "not_started.ico")
+        notify("Too short to set!", "You have to set from two minutes", "images\\not_started.ico")
 
 def sleep(icon = None, query = None):
     global saved_time
