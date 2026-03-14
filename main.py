@@ -1,6 +1,6 @@
-import pystray, time, threading, os, tomllib, subprocess
+import pystray, time, threading, os, tomllib, subprocess, sys
 from PIL import Image
-from plyer import notification
+from winotify import Notification
 
 SLEEPTIME = 10 #default value
 
@@ -14,13 +14,19 @@ sleepReturn = None
 icon = None
 settingFilePath = None
 
-def notify(titles : str,messages : str, icon = "images\\icon.ico"):
-    notification.notify(title=titles,
-                        message=messages,
-                        app_name="Auto Sleeper",
-                        app_icon=icon,
-                        timeout=5
-                    )
+def get_resource_path(relative_path):
+    base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
+
+def notify(titles: str, messages: str, icons="images\\icon.ico"):
+    abs_icon_path = get_resource_path(icons)
+    toast = Notification(
+        app_id="Auto Sleeper",
+        title=titles,
+        msg=messages,
+        icon=abs_icon_path
+    )
+    toast.show()
 
 def sleepReturnCheck():
     global first, icon, three_min_notification, notified
