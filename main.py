@@ -14,6 +14,14 @@ sleepReturn = None
 icon = None
 settingFilePath = None
 
+def notify(titles : str,messages : str, icon = "icon.ico"):
+    notification.notify(title=titles,
+                        message=messages,
+                        app_name="Auto Sleeper",
+                        app_icon=icon,
+                        timeout=5
+                    )
+
 def sleepReturnCheck():
     global first, icon, three_min_notification, notified
     if first:
@@ -23,7 +31,8 @@ def sleepReturnCheck():
     while running:
         now = time.time()
         if now - last > 10:
-            setSleepTime()
+            notify("Welcome back!", f"Start timer and sleep in {SLEEPTIME} minutes")
+            setSleepTime(saved_time)
         last = now
         time.sleep(1)
         if timer and timer.is_alive():
@@ -32,26 +41,25 @@ def sleepReturnCheck():
             if remaining < 4:
                 icon.icon = three_min_image
                 if three_min_notification and not(notified):
-                    notification.notify(title="3min",
-                                        message="Sleep after 3min",
-                                        app_name="Auto Sleeper",
-                                        app_icon="icon.ico",
-                                        timeout=5
-                    )
+                    notify("Sleep in 3 minutes", "if you extend time, please push \"Extend time\" button.", "3min.ico")
                     notified = True
         else:
-            icon.title = f"Auto Sleeper(push start button)"
+            icon.title = f"Auto Sleeper(push me!)"
 
-def setSleepTime(icon = None, query = None):
+def setSleepTime(icon = 0, query = None):
     global timer, sleep_at
     if "Start" in str(query) and timer.is_alive():
+        notify(f"Sleep in {int((sleep_at - time.time())/60)}minutes", "Do your best lol")
         return
     if "Start timer" in str(query) or query == None:
         long = SLEEPTIME * 60
+        if not "Start timer" in str(query):
+            long += icon
+            if long >= SLEEPTIME * 60 *2:
+                long = SLEEPTIME * 60 *2
         sleep_at = time.time() + long
         new_time = (SLEEPTIME + 0.5) * 60
     else:
-        print(str(query)[:-3])
         selected_time = int(str(query)[:-3])
         long = selected_time * 60
         sleep_at = time.time() + long
@@ -60,9 +68,13 @@ def setSleepTime(icon = None, query = None):
         makeTimer(new_time)
 
     else:
-        print("too short")
+        notify("Too short to set!", "You have to set from two minutes", "not_started.ico")
 
 def sleep(icon = None, query = None):
+    global saved_time
+    if str(query) == "Sleep right now":
+        print(sleep_at - time.time())
+        saved_time = sleep_at - time.time()
     subprocess.run("rundll32.exe powrprof.dll,SetSuspendState 0,1,0", shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
 
 def extendSleepTimer(icon, extend_minutes_item):
@@ -73,6 +85,7 @@ def extendSleepTimer(icon, extend_minutes_item):
     last_timer_time = sleep_at - time.time()
     new_time = last_timer_time + extend_minutes * 60
     sleep_at = time.time() + new_time
+    notify("Extend time", f"extend {extend_minutes} minutes, so sleep in {int(new_time/60)} minutes")
 
     makeTimer(new_time)
 
@@ -103,7 +116,7 @@ def cancelTimer(icon, query):
 def openSettingFile(icon, query):
     if not os.path.exists(settingFilePath):
         with open(settingFilePath, "w") as f:
-            f.write("sleeping_time = 10\nextend_time = [5]\ntimer_time = [5]\nthree_min_notification = false\n")
+            f.write("# default sleeping time\nsleeping_time = 10\n# selection of extend time\nextend_time = [5]\n# selection of timer time\ntimer_time = [5]\n# yes/no three minutes notification(true/false)\nthree_min_notification = false\n")
     os.startfile(settingFilePath)
 
 def getSettingPath():
@@ -158,4 +171,5 @@ def main():
 if __name__ == "__main__":
     first = True
     sleep_at = None
+    saved_time = 0
     main()
