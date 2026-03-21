@@ -14,7 +14,7 @@ sleepReturn = None
 icon = None
 settingFilePath = None
 
-def get_resource_path(relative_path):
+def get_resource_path(relative_path : str):
     base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
 
@@ -55,11 +55,11 @@ def sleepReturnCheck():
 def setSleepTime(icon = 0, query = None):
     global timer, sleep_at
     if "Start" in str(query) and timer.is_alive():
-        notify(f"Sleep in {int((sleep_at - time.time())/60)}minutes", "Do your best lol")
+        notify(f"Sleep in {int((sleep_at - time.time())/60)}minutes", "Do your best.")
         return
     if "Start timer" in str(query) or query == None:
         long = SLEEPTIME * 60
-        if not "Start timer" in str(query):
+        if not "Start timer" in str(query) and extend_last_time:
             long += icon
             if long >= SLEEPTIME * 60 *2:
                 long = SLEEPTIME * 60 *2
@@ -122,7 +122,7 @@ def cancelTimer(icon, query):
 def openSettingFile(icon, query):
     if not os.path.exists(settingFilePath):
         with open(settingFilePath, "w") as f:
-            f.write("# default sleeping time\nsleeping_time = 10\n# selection of extend time\nextend_time = [5]\n# selection of timer time\ntimer_time = [5]\n# yes/no three minutes notification(true/false)\nthree_min_notification = false\n")
+            f.write("# default sleeping time\nsleeping_time = 10\n# selection of extend time\nextend_time = [5]\n# selection of timer time\ntimer_time = [5]\n# yes/no three minutes notification(true/false)\nthree_min_notification = false\nextend_last_time = false")
     os.startfile(settingFilePath)
 
 def getSettingPath():
@@ -133,7 +133,7 @@ def getSettingPath():
     return os.path.join(app_dir, "setting.toml")
 
 def makeIcon():
-    global SLEEPTIME, settingFilePath, three_min_notification
+    global SLEEPTIME, settingFilePath, three_min_notification, extend_last_time
     extendTime = None
     timerTime = None
     settingFilePath = getSettingPath()
@@ -144,11 +144,13 @@ def makeIcon():
         extendTime = dic["extend_time"]
         timerTime = dic["timer_time"]
         three_min_notification = dic["three_min_notification"]
+        extend_last_time = dic["extend_last_time"]
     except:
         SLEEPTIME = 10
         extendTime = []
         timerTime = []
         three_min_notification = False
+        extend_last_time = False
         print("not found setting file")
     
     new_menu = pystray.Menu(pystray.MenuItem("Wanna exit", pystray.Menu(pystray.MenuItem("Really?", pystray.Menu(pystray.MenuItem("No", None), pystray.MenuItem("Exit", exit), pystray.MenuItem("Sleep right now", sleep))))),
@@ -178,4 +180,5 @@ if __name__ == "__main__":
     first = True
     sleep_at = None
     saved_time = 0
+    extend_last_time = False
     main()
