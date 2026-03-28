@@ -90,10 +90,13 @@ def extendSleepTimer(icon, extend_minutes_item):
         return
     last_timer_time = sleep_at - time.time()
     new_time = last_timer_time + extend_minutes * 60
-    sleep_at = time.time() + new_time
-    notify("Extend time", f"extend {extend_minutes} minutes, so sleep in {int(new_time/60)} minutes")
-
-    makeTimer(new_time)
+    tmp_sleep_at = time.time() + new_time
+    if sleep_at - time.time() < extend_minutes * 60:
+        notify("Extend time", f"extend {extend_minutes} minutes, so sleep in {int(new_time/60)} minutes")
+        sleep_at = tmp_sleep_at
+        makeTimer(new_time)
+    else:
+        notify("Cannot extend", "You cannot extend sleep time")
 
 def makeTimer(sleep_time):
     global timer, notified
